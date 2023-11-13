@@ -15,19 +15,14 @@
 * Created By: Diya S, Jobin & Jismi IT Services LLP
 *
 * Description : 
-Send a email notification to all Customers once a month if they have overdue Invoices.
+Send a email notification to all Customers once a month regarding the Overdue Invoice information till the previous month where the sender is Sales Rep and if there is no Sales rep for the customer, sender will be a static NetSuite Admin.
 
-We need to send the Overdue Invoice information till the previous month to the corresponding Customer.
+The email notification should contain all of the customers overdue invoices and should contain the Customer Name and Customer Email, Invoice document Number, Invoice Amount, Days Overdue which is attached as a CSV File to the email.
 
-The email notification should contain all of the customers overdue invoices.
-
-This email notification should contain the Customer Name and Customer Email, Invoice document Number, Invoice Amount, Days Overdue which is attached as a CSV File to the email.
-
-The sender of the email should be Sales Rep. If there is no Sales rep for the customer, sender will be a static NetSuite Admin
 * 
 *****************************************************************************
 *******************************************************/
-define(['N/currentRecord', 'N/email', 'N/file', 'N/record', 'N/search'],
+define(['N/email', 'N/file', 'N/record', 'N/search','N/log'],
     /**
  * @param{currentRecord} currentRecord
  * @param{email} email
@@ -35,7 +30,7 @@ define(['N/currentRecord', 'N/email', 'N/file', 'N/record', 'N/search'],
  * @param{record} record
  * @param{search} search
  */
-    (currentRecord, email, file, record, search) => {
+    (email, file, record, search) => {
         /**
          * Defines the function that is executed at the beginning of the map/reduce process and generates the input data.
          * @param {Object} inputContext
@@ -50,7 +45,7 @@ define(['N/currentRecord', 'N/email', 'N/file', 'N/record', 'N/search'],
          */
 
         const getInputData = (inputContext) => {
-            try {s
+            try {
                 let invSearch = search.create({
                     type: search.Type.INVOICE,
                     columns: ['tranid', 'entity'],
@@ -59,7 +54,7 @@ define(['N/currentRecord', 'N/email', 'N/file', 'N/record', 'N/search'],
                 return invSearch;
             }
             catch (e) {
-                log.debug("error in getInputData", e);
+                log.error("error in getInputData", e);
             }
 
         }
@@ -83,14 +78,14 @@ define(['N/currentRecord', 'N/email', 'N/file', 'N/record', 'N/search'],
 
         const map = (mapContext) => {
             try {
-                var searchResult = JSON.parse(mapContext.value);
-                log.debug('searchResult', searchResult);
-                var invId = searchResult.id;
+                let searchResult = JSON.parse(mapContext.value);
+                // log.debug('searchResult', searchResult);
+                let invId = searchResult.id;
 
-                var cusValue = searchResult.values['entity'];
-                var cusId = cusValue.value
+                let cusValue = searchResult.values['entity'];
+                let cusId = cusValue.value
 
-                var results = [];
+                let results = [];
 
 
                 let invoiceObj = search.lookupFields({
@@ -114,7 +109,7 @@ define(['N/currentRecord', 'N/email', 'N/file', 'N/record', 'N/search'],
                 });
             }
             catch (e) {
-                log.debug("error in map", e);
+                log.error("error in map", e);
             }
 
         }
@@ -135,17 +130,18 @@ define(['N/currentRecord', 'N/email', 'N/file', 'N/record', 'N/search'],
          * @since 2015.2
          */
         const reduce = (reduceContext) => {
+          
             
                 let reduceKey = reduceContext.key;
                 let reduceValue = reduceContext.values;
                 let len = reduceValue.length;
 
-
-                var csvContent = " Customer Name ,Customer Email, Invoice document Number, Days Overdue,Invoice Amount "
+                log.debug("customerrecordid",reduceKey);
+                let csvContent = " Customer Name ,Customer Email, Invoice document Number, Days Overdue,Invoice Amount "
                 csvContent += "\n"
 
                 for (let i = 0; i < len; i++) {
-                    var c1 = JSON.parse(reduceContext.values[i]);
+                    let c1 = JSON.parse(reduceContext.values[i]);
                     for (let j = 0; j < c1.length; j++) {
                         csvContent += c1[j];
                         csvContent += " , ";
@@ -156,25 +152,30 @@ define(['N/currentRecord', 'N/email', 'N/file', 'N/record', 'N/search'],
                 let today = Date.now();
                 let filename = `${today}_Invoice_Overdue_Details.csv`
 
-                var fileObj = file.create({
+                let fileObj = file.create({
                     name: filename,
                     fileType: file.Type.CSV,
                     contents: csvContent,
                     folder: 192
                 });
-                var fileId = fileObj.save();
+                let fileId = fileObj.save();
 
                 let cusRec = record.load({
                     type: record.Type.CUSTOMER,
                     id: reduceKey
                 });
+                
+                log.debug("cusRec",cusRec);
                 let saleRep = cusRec.getValue({
                     fieldId: 'salesrep'
                 });
 
+
+
                 let adminid = -5;
 
                 if (saleRep) {
+                    log.debug("hy");
                      e1=email.send({
                         author: saleRep,
                         recipients: reduceKey,
@@ -194,7 +195,7 @@ define(['N/currentRecord', 'N/email', 'N/file', 'N/record', 'N/search'],
                         attachments: [fileObj]
                     });
                 }
-            
+           
            
         }
 
