@@ -180,12 +180,24 @@ define(['N/record', 'N/search'],
          */
         const put = (requestBody) => {
             let fulid = requestBody.id;
-            let memo = requestBody.memo;
-            let =record.load({
+            let memov = requestBody.memoval;
+            let fulfillrec=record.load({
                 type: record.Type.ITEM_FULFILLMENT,
                 id: fulid,
                 isDynamic: true
             });
+            fulfillrec.setValue({
+                fieldId:'memo',
+                value:memov,
+                ignoreFieldChange:true
+            });
+            fulfillrec.save(
+                {
+                    enableSourcing:true,
+                    ignoreMandatoryFields:true
+                }
+            );
+            return ("the item fulfillment record was successfully updated");
         }
 
         /**
@@ -246,6 +258,13 @@ define(['N/record', 'N/search'],
          * @since 2015.2
          */
         const doDelete = (requestParams) => {
+            let fulfillmentid=requestParams.id;
+            record.delete({
+                type:record.Type.ITEM_FULFILLMENT,
+                id:fulfillmentid
+            });
+            return("record with id "+fulfillmentid+"is deleted");
+
 
         }
 
