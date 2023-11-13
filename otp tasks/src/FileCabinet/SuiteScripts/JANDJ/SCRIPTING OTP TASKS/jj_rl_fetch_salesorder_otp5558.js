@@ -45,7 +45,7 @@ define(['N/record', 'N/search'],
 
             let salesOrderId = requestParams.id;
 
-            var statusSale = requestParams.status;
+            let statusSale = requestParams.status;
             // log.debug("status",statusSale);
 
             if (statusSale) {
@@ -65,10 +65,10 @@ define(['N/record', 'N/search'],
 
                 for (let j = 0; j < searchdetails.length; j++) {
 
-                    var internalid = searchdetails[j].getValue({ name: "internalId" });
-                    var documentNumber = searchdetails[j].getValue({ name: "tranid" });
-                    var date = searchdetails[j].getValue({ name: "trandate" });
-                    var total = searchdetails[j].getValue({ name: "total" });
+                    let internalid = searchdetails[j].getValue({ name: "internalId" });
+                    let documentNumber = searchdetails[j].getValue({ name: "tranid" });
+                    let date = searchdetails[j].getValue({ name: "trandate" });
+                    let total = searchdetails[j].getValue({ name: "total" });
 
                     orderList.push({
 
@@ -98,12 +98,12 @@ define(['N/record', 'N/search'],
 
                 });
 
-                var lines = saleOrderSearch.run().getRange({
+                let lines = saleOrderSearch.run().getRange({
                     start: 0,
                     end: 100
                 });
 
-                var itemList = [];
+                let itemList = [];
 
                 if (lines.length === 0) {
 
@@ -114,7 +114,7 @@ define(['N/record', 'N/search'],
 
                 else {
 
-                    var salesOrder = record.load({
+                    let salesOrder = record.load({
                         type: record.Type.SALES_ORDER,
                         id: salesOrderId,
                         isDynamic: true
@@ -127,26 +127,26 @@ define(['N/record', 'N/search'],
                     });
 
 
-                    for (var i = 0; i < lineCount; i++) {
+                    for (let i = 0; i < lineCount; i++) {
 
-                        var itemName = salesOrder.getSublistText({
+                        let itemName = salesOrder.getSublistText({
                             sublistId: 'item',
                             fieldId: 'item',
                             line: i
                         });
 
-                        var quantity = salesOrder.getSublistValue({
+                        let quantity = salesOrder.getSublistValue({
                             sublistId: 'item',
                             fieldId: 'quantity',
                             line: i
                         });
-                        var rate = salesOrder.getSublistValue({
+                        let rate = salesOrder.getSublistValue({
                             sublistId: 'item',
                             fieldId: 'rate',
                             line: i
                         });
 
-                        var amount = salesOrder.getSublistValue({
+                        let amount = salesOrder.getSublistValue({
                             sublistId: 'item',
                             fieldId: 'amount',
                             line: i
