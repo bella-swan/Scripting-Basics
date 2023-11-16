@@ -4,7 +4,7 @@
  */
 /****************************************************************************
 ************************************************
-**${OTP-5556} : ${Monthly Over Due Reminder for Customer}
+**${OTP-5557} : ${Send Sales Order Details to 3rd party application}
 * 
 *****************************************************************************
 *********************************************
@@ -22,8 +22,14 @@ The application needs to fetch the list of sales order details with an open stat
 The application needs to fetch the single sales order with item details (item name, quantity, rate, gross amount). The internal id of the sales order will be passed as a parameter in the API. The application needs to use the API for fetching the single sales order. If no sales order is found for the parameter id, then the message "RESULT: NOT FOUND needs to be shown.
 
 Create a POST API for the following:
+When the application sends an API request, then the item fulfilment needs to be created for the sales order. The id and details of the sales order will be passed as body in the HTTP request so that it can find the correct sales order and create the item fulfilment record for the sales order with the correct item details. The API should process the request as the body of the HTTP request.
 
 When the application sends an API request, then the item fulfilment needs to be created for the sales order. The id and details of the sales order will be passed as body in the HTTP request so that it can find the correct sales order and create the item fulfilment record for the sales order with the correct item details. The API should process the request as the body of the HTTP request.
+
+Update the item fulfilment record as per the body of the PUT HTTP request. The application will call the API for updating the item fulfilment record, and details of the update will be sent as JSON from the application. The API will find the item fulfilment record and update the item fulfilment record.
+Create a DELETE API for the following:
+
+The application needs to delete the item fulfilment record using the API. The id of the item fulfilment to delete will be passed in the DELETE HTTP request, so the API should delete the correct item fulfillment.
 * 
 *****************************************************************************
 *******************************************************/
@@ -44,18 +50,13 @@ define(['N/record', 'N/search'],
         const get = (requestParams) => {
 
             let salesOrderId = requestParams.id;
-
             let statusSale = requestParams.status;
-            // log.debug("status",statusSale);
-
             if (statusSale) {
-
                 let searchObj1 = search.create({
                     type: search.Type.SALES_ORDER,
                     columns: ['internalid', 'tranid', 'total', 'trandate'],
                     filters: [[["status", "is", "SalesOrd:A"], "or", ["status", "is", "SalesOrd:B"], "or", ["status", "is", "SalesOrd:D"], "or",
                     ["status", "is", "SalesOrd:E"], "or", ["status", "is", "SalesOrd:F"]], "and", ["mainline", "is", "T"]]
-
                 });
                 let searchdetails = searchObj1.run().getRange({
                     start: 0,
@@ -64,30 +65,21 @@ define(['N/record', 'N/search'],
                 orderList = [];
 
                 for (let j = 0; j < searchdetails.length; j++) {
-
                     let internalid = searchdetails[j].getValue({ name: "internalId" });
                     let documentNumber = searchdetails[j].getValue({ name: "tranid" });
                     let date = searchdetails[j].getValue({ name: "trandate" });
                     let total = searchdetails[j].getValue({ name: "total" });
-
                     orderList.push({
-
                         Internalid: internalid,
                         DocumentNumber: documentNumber,
                         Date: date,
                         Total: total
-
                     });
                 }
-
-
                 return {
                     orderList: orderList,
-
                 };
-
             }
-
             if (salesOrderId) {
 
                 let saleOrderSearch = search.create({
@@ -95,46 +87,32 @@ define(['N/record', 'N/search'],
                     id: 'customsearch_jj_rl_salesorders_1',
                     columns: ['item.itemid', 'rate', 'quantity', 'amount'],
                     filters: [['mainline', 'is', true], 'and', ['internalid', 'is', salesOrderId]]
-
                 });
-
                 let lines = saleOrderSearch.run().getRange({
                     start: 0,
                     end: 100
                 });
-
                 let itemList = [];
-
                 if (lines.length === 0) {
-
                     return {
                         message: 'RESULT: NOT FOUND'
                     };
                 }
-
                 else {
-
                     let salesOrder = record.load({
                         type: record.Type.SALES_ORDER,
                         id: salesOrderId,
                         isDynamic: true
                     });
-
                     let lineCount = salesOrder.getLineCount({
-
                         sublistId: 'item'
-
                     });
-
-
                     for (let i = 0; i < lineCount; i++) {
-
                         let itemName = salesOrder.getSublistText({
                             sublistId: 'item',
                             fieldId: 'item',
                             line: i
                         });
-
                         let quantity = salesOrder.getSublistValue({
                             sublistId: 'item',
                             fieldId: 'quantity',
@@ -145,13 +123,11 @@ define(['N/record', 'N/search'],
                             fieldId: 'rate',
                             line: i
                         });
-
                         let amount = salesOrder.getSublistValue({
                             sublistId: 'item',
                             fieldId: 'amount',
                             line: i
                         });
-
                         itemList.push({
                             itemName: itemName,
                             quantity: quantity,
@@ -159,7 +135,6 @@ define(['N/record', 'N/search'],
                             amount: amount
                         });
                     }
-
                     return {
                         itemList: itemList
                     };
@@ -181,20 +156,20 @@ define(['N/record', 'N/search'],
         const put = (requestBody) => {
             let fulid = requestBody.id;
             let memov = requestBody.memoval;
-            let fulfillrec=record.load({
+            let fulfillrec = record.load({
                 type: record.Type.ITEM_FULFILLMENT,
                 id: fulid,
                 isDynamic: true
             });
             fulfillrec.setValue({
-                fieldId:'memo',
-                value:memov,
-                ignoreFieldChange:true
+                fieldId: 'memo',
+                value: memov,
+                ignoreFieldChange: true
             });
             fulfillrec.save(
                 {
-                    enableSourcing:true,
-                    ignoreMandatoryFields:true
+                    enableSourcing: true,
+                    ignoreMandatoryFields: true
                 }
             );
             return ("the item fulfillment record was successfully updated");
@@ -228,25 +203,17 @@ define(['N/record', 'N/search'],
                     fieldId: 'shipstatus',
                     value: 'C'
                 });
-
-
                 fulfillob.save();
                 soob.setValue({
                     fieldId: 'status',
                     text: 'Pending Billing'
                 });
-
                 return "itemfulfillment record created successfully"
-
             }
-
             catch (e) {
                 log.debug(e);
                 return e
-
             }
-
-
         }
 
         /**
@@ -258,16 +225,12 @@ define(['N/record', 'N/search'],
          * @since 2015.2
          */
         const doDelete = (requestParams) => {
-            let fulfillmentid=requestParams.id;
+            let fulfillmentid = requestParams.id;
             record.delete({
-                type:record.Type.ITEM_FULFILLMENT,
-                id:fulfillmentid
+                type: record.Type.ITEM_FULFILLMENT,
+                id: fulfillmentid
             });
-            return("record with id "+fulfillmentid+"is deleted");
-
-
+            return ("record with id " + fulfillmentid + "is deleted");
         }
-
         return { get, put, post, delete: doDelete }
-
     });
