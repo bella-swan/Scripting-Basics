@@ -22,7 +22,7 @@ The email notification should contain all of the customers overdue invoices and 
 * 
 *****************************************************************************
 *******************************************************/
-define(['N/email', 'N/file', 'N/record', 'N/search','N/log'],
+define(['N/email', 'N/file', 'N/record', 'N/search', 'N/log'],
     /**
  * @param{currentRecord} currentRecord
  * @param{email} email
@@ -130,73 +130,76 @@ define(['N/email', 'N/file', 'N/record', 'N/search','N/log'],
          * @since 2015.2
          */
         const reduce = (reduceContext) => {
-          
-            
-                let reduceKey = reduceContext.key;
-                let reduceValue = reduceContext.values;
-                let len = reduceValue.length;
 
-                log.debug("customerrecordid",reduceKey);
-                let csvContent = " Customer Name ,Customer Email, Invoice document Number, Days Overdue,Invoice Amount "
-                csvContent += "\n"
 
-                for (let i = 0; i < len; i++) {
-                    let c1 = JSON.parse(reduceContext.values[i]);
-                    for (let j = 0; j < c1.length; j++) {
-                        csvContent += c1[j];
-                        csvContent += " , ";
-                    }
-                    csvContent += "\n";
+            let reduceKey = reduceContext.key;
+            let reduceValue = reduceContext.values;
+            let len = reduceValue.length;
 
+            log.debug("customerrecordid", reduceKey);
+            let csvContent = " Customer Name ,Customer Email, Invoice document Number, Days Overdue,Invoice Amount "
+            csvContent += "\n"
+
+            for (let i = 0; i < len; i++) {
+                let c1 = JSON.parse(reduceContext.values[i]);
+                for (let j = 0; j < c1.length; j++) {
+                    csvContent += c1[j];
+                    csvContent += " , ";
                 }
-                let today = Date.now();
-                let filename = `${today}_Invoice_Overdue_Details.csv`
+                csvContent += "\n";
 
-                let fileObj = file.create({
-                    name: filename,
-                    fileType: file.Type.CSV,
-                    contents: csvContent,
-                    folder: 192
+            }
+            let today = Date.now();
+            let filename = `${today}_Invoice_Overdue_Details.csv`
+
+            let fileObj = file.create({
+                name: filename,
+                fileType: file.Type.CSV,
+                contents: csvContent,
+                folder: 192
+            });
+            let fileId = fileObj.save();
+
+            let cusRec = record.load({
+                type: record.Type.CUSTOMER,
+                id: reduceKey
+            });
+
+            log.debug("cusRec", cusRec);
+            let saleRep = cusRec.getValue({
+                fieldId: 'salesrep'
+            });
+
+            let isinActive = cusRec.getValue({
+                fieldId: 'isinactive'
+            });
+
+            let adminid = -5;
+            if (!isinActive) {
+
+            if (saleRep) {
+                log.debug("hy");
+                e1 = email.send({
+                    author: saleRep,
+                    recipients: reduceKey,
+                    subject: "INVOICE OVERDUE DETAILS",
+                    body: "Hi Sir/Ma'am,<br/> Please find the attached 'Monthly Invoice Overdue' details.<br/>We are hoping you to take the necessary action at the earliest.<br/>  Thank you.",
+                    attachments: [fileObj]
                 });
-                let fileId = fileObj.save();
+            }
 
-                let cusRec = record.load({
-                    type: record.Type.CUSTOMER,
-                    id: reduceKey
+            else {
+
+                email.send({
+                    author: adminid,
+                    recipients: reduceKey,
+                    subject: "INVOICE OVERDUE DETAILS",
+                    body: "Hi Sir/Ma'am,<br/> Please find the attached 'Monthly Invoice Overdue' details. <br/>We are hoping you to take the necessary action at the earliest.<br/> Thank you. ",
+                    attachments: [fileObj]
                 });
-                
-                log.debug("cusRec",cusRec);
-                let saleRep = cusRec.getValue({
-                    fieldId: 'salesrep'
-                });
+            }
+        }
 
-
-
-                let adminid = -5;
-
-                if (saleRep) {
-                    log.debug("hy");
-                     e1=email.send({
-                        author: saleRep,
-                        recipients: reduceKey,
-                        subject: "INVOICE OVERDUE DETAILS",
-                        body: "Hi Sir/Ma'am,<br/> Please find the attached 'Monthly Invoice Overdue' details.<br/>We are hoping you to take the necessary action at the earliest.<br/>  Thank you.",
-                        attachments: [fileObj]
-                    });
-                }
-
-                else {
-
-                    email.send({
-                        author: adminid,
-                        recipients: reduceKey,
-                        subject: "INVOICE OVERDUE DETAILS",
-                        body: "Hi Sir/Ma'am,<br/> Please find the attached 'Monthly Invoice Overdue' details. <br/>We are hoping you to take the necessary action at the earliest.<br/> Thank you. ",
-                        attachments: [fileObj]
-                    });
-                }
-           
-           
         }
 
 
