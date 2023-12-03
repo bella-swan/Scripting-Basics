@@ -2,6 +2,25 @@
  * @NApiVersion 2.1
  * @NScriptType Suitelet
  */
+/****************************************************************************
+************************************************
+**${OTP-5622} : ${External Custom Record form and actions}
+* 
+*****************************************************************************
+*********************************************
+* Author: Jobin & Jismi IT Services LLP
+*
+* Date Created : 14-November-2023
+*
+* Created By: Diya S, Jobin & Jismi IT Services LLP
+*
+* Description : 
+Create a custom record and if there is a customer with the given email Id, link that customer to the custom record.
+
+Whenever there is an entry in a custom record, send a notification to a static NetSuite Admin and if there is a Sales Rep for the customer, send a notification email to the Sales Rep as well.
+* 
+*****************************************************************************
+*******************************************************/
 define(['N/email', 'N/record', 'N/search', 'N/ui/serverWidget', 'N/url'],
     /**
  
@@ -25,47 +44,47 @@ define(['N/email', 'N/record', 'N/search', 'N/ui/serverWidget', 'N/url'],
             {
                 if (scriptContext.request.method === 'GET') {
                     let form = serverWidget.createForm({
-                        title: 'CUSTOMER REGISTRATION FORM (OTP-4753)'
+                        title: 'CUSTOMER REGISTRATION FORM'
                     });
-                    let cusdet = form.addFieldGroup({
-                        id: 'cusdet',
+                form.addFieldGroup({
+                        id: 'customerdetails',
                         label: 'CUSTOMER DETAILS'
                     });
-                    let cusName = form.addField({
+                 form.addField({
                         id: 'customername',
                         type: serverWidget.FieldType.TEXT,
                         label: 'Customer Name',
-                        container: 'cusdet'
+                        container: 'customerdetails'
                     });
-                    let cusEmail = form.addField({
-                        id: 'cusemail',
+                form.addField({
+                        id: 'customeremail',
                         type: serverWidget.FieldType.TEXT,
                         label: ' Customer Email',
-                        container: 'cusdet'
+                        container: 'customerdetails'
                     });
-                    let subject = form.addField({
+                form.addField({
                         id: 'subject',
                         type: serverWidget.FieldType.TEXT,
                         label: 'Subject',
-                        container: 'cusdet'
+                        container: 'customerdetails'
                     });
-                    let message = form.addField({
+                form.addField({
                         id: 'message',
                         type: serverWidget.FieldType.TEXTAREA,
                         label: 'Message',
-                        container: 'cusdet'
+                        container: 'customerdetails'
                     });
-                    let but = form.addSubmitButton({
+                form.addSubmitButton({
                         label: 'Submit'
                     });
                     scriptContext.response.writePage(form);
                 }
                 else {
                     
-                    let cusNameF      = scriptContext.request.parameters.customername;
-                    let cusEmailF    = scriptContext.request.parameters.cusemail;
-                    let subjectF      = scriptContext.request.parameters.subject;
-                    let messageF     = scriptContext.request.parameters.message;
+                    let customerName      = scriptContext.request.parameters.customername;
+                    let customerEmail    = scriptContext.request.parameters.customeremail;
+                    let subjectField= scriptContext.request.parameters.subject;
+                    let messageField    = scriptContext.request.parameters.message;
                     
                     let cusSearch = search.create({
                         type: search.Type.CUSTOMER,
@@ -74,27 +93,27 @@ define(['N/email', 'N/record', 'N/search', 'N/ui/serverWidget', 'N/url'],
                         columns: ['email','salesrep','internalId']
                     });
                     let flag = 0;
-                    let custId;
+                    let customerId;
                     cusSearch.run().each(function(result){
                         let custEmail = result.getValue({
                             name: 'email'
                         });
-                        if(custEmail == cusEmailF){
+                        if(custEmail == customerEmail){
                             flag=1;
-                            custId = result.id                                                             
+                            customerId = result.id                                                             
                         }  
                         return true;                
                     }); 
                     email.send({
                         author:-5,
                         recipients: -5,
-                        subject: subjectF,
-                        body: messageF
+                        subject: subjectField,
+                        body: messageField
                     });
                     if(flag == 1){
                         let cusRec = record.load({
                             type:record.Type.CUSTOMER,
-                            id:custId,
+                            id:customerId,
                             isDynamic:true
                         });
                         let salesRepId = cusRec.getValue({
@@ -105,16 +124,16 @@ define(['N/email', 'N/record', 'N/search', 'N/ui/serverWidget', 'N/url'],
                             email.send({
                                 author:15,
                                 recipients: salesRepId,
-                                subject: subjectF,
-                                body: messageF
+                                subject: subjectField,
+                                body: messageField
                             });
                         }
                     }
                     scriptContext.response.write('</br><b><h2>DETAILS OF THE CUSTOMER:</h2>'
-                        + '</br></br> Customer Name : ' + cusNameF
-                        + '</br></br> Customer Email : ' + cusEmailF
-                        + '</br></br> Subject : ' + subjectF
-                        + '</br></br> Message : ' + messageF
+                        + '</br></br> Customer Name : ' + customerName
+                        + '</br></br> Customer Email : ' + customerEmail
+                        + '</br></br> Subject : ' + subjectField
+                        + '</br></br> Message : ' + messageField
                     );               
                     let cusRecord = record.create({
                         type: 'customrecord_jj_customerdetails_otp5622',
@@ -122,11 +141,11 @@ define(['N/email', 'N/record', 'N/search', 'N/ui/serverWidget', 'N/url'],
                     });
                     cusRecord.setValue({
                         fieldId: 'custrecord_jj_customername',
-                        value: cusNameF
+                        value: customerName
                     });
                     cusRecord.setValue({
                         fieldId: 'custrecord_jj_customeremail',
-                        value: cusEmailF
+                        value: customerEmail
                     });
                     if(flag == 1){
                         let link = 'https://';
@@ -135,24 +154,24 @@ define(['N/email', 'N/record', 'N/search', 'N/ui/serverWidget', 'N/url'],
                             });
                             let urlPath = url.resolveRecord({
                                 recordType: record.Type.CUSTOMER,
-                                recordId: custId,
+                                recordId: customerId,
                                 isEditMode: true
                             });
-                            let cusUrl = link + hostUrl + urlPath;
+                            let customerUrl = link + hostUrl + urlPath;
                             cusRecord.setValue({
                                 fieldId: 'custrecord_jj_customerreference',
-                                value: cusUrl
+                                value: customerUrl
                             });
                     }               
                     cusRecord.setValue({
                         fieldId: 'custrecord_jj_subject',
-                        value: subjectF
+                        value: subjectField
                     });
                     cusRecord.setValue({
                         fieldId: 'custrecord_jj_message',
-                        value: messageF
+                        value: messageField
                     });
-                    var cusId = cusRecord.save({
+                    let cusId = cusRecord.save({
                         ignoreMandatoryFields : true,
                         enableSourcing : true
                     });
